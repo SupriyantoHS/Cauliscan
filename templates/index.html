@@ -632,7 +632,7 @@ body::before {
 #mobile-topbar {
   display: none;
   position: fixed; top: 0; left: 0; right: 0;
-  height: 52px; z-index: 300;
+  height: 52px; z-index: 150; /* below the sidebar so it can't bleed through when the menu is open */
   background: var(--sidebar);
   border-bottom: 1px solid var(--border);
   align-items: center; justify-content: space-between;
@@ -648,6 +648,10 @@ body::before {
   background: var(--surface2); border: 1px solid var(--border2);
   display: flex; align-items: center; justify-content: center;
   cursor: pointer; flex-direction: column; gap: 4px; padding: 10px;
+  /* Detached from the topbar's own stacking context so it always stays
+     above the sidebar (and remains clickable to close the menu) even
+     though the topbar itself now renders behind the open sidebar. */
+  position: fixed; top: 8px; right: 16px; z-index: 320;
 }
 #hamburger-btn span {
   display: block; height: 1.5px; background: var(--text);
@@ -656,6 +660,18 @@ body::before {
 #hamburger-btn.open span:nth-child(1) { transform: rotate(45deg) translate(4px, 4px); }
 #hamburger-btn.open span:nth-child(2) { opacity: 0; transform: scaleX(0); }
 #hamburger-btn.open span:nth-child(3) { transform: rotate(-45deg) translate(4px, -4px); }
+
+/* Mobile-only theme toggle, sits just left of the hamburger button */
+#theme-toggle-mobile {
+  width: 36px; height: 36px; border-radius: 9px;
+  background: var(--surface); border: 1px solid var(--border2);
+  box-shadow: 0 1px 6px rgba(0,0,0,0.25);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; color: var(--text);
+  position: fixed; top: 8px; right: 62px; z-index: 320;
+}
+#theme-toggle-mobile svg { width: 16px; height: 16px; }
+#theme-toggle-mobile:hover { color: var(--blue); border-color: rgba(59,130,246,.4); }
 
 /* ── MOBILE BOTTOM NAVBAR ── */
 #bottom-nav {
@@ -666,6 +682,14 @@ body::before {
   border-top: 1px solid var(--border);
   padding: 0 8px;
   align-items: center; justify-content: space-around;
+  transition: transform .25s ease, opacity .2s ease;
+}
+/* Hide the bottom tab bar while the drawer menu is open so it doesn't
+   duplicate/overlap with the same nav items already listed in the sidebar. */
+body.menu-open #bottom-nav {
+  transform: translateY(100%);
+  opacity: 0;
+  pointer-events: none;
 }
 .bottom-nav-btn {
   display: flex; flex-direction: column; align-items: center;
@@ -794,6 +818,10 @@ html.light .bottom-nav-btn { color: rgba(15,23,42,0.4); }
 <!-- ── MOBILE TOPBAR ── -->
 <div id="mobile-topbar">
   <div class="mobile-logo">CAULI<span>SCAN</span></div>
+  <button id="theme-toggle-mobile" onclick="toggleTheme()" title="Toggle light/dark mode" aria-label="Toggle theme">
+    <svg class="theme-icon-moon" width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+    <svg class="theme-icon-sun" width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" style="display:none"><circle cx="12" cy="12" r="5"/><path stroke-linecap="round" d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+  </button>
   <button id="hamburger-btn" onclick="toggleSidebar()" aria-label="Menu">
     <span></span><span></span><span></span>
   </button>
@@ -2497,11 +2525,21 @@ checkModelStatus();
 setInterval(checkModelStatus, 30000);
 
 /* ── THEME TOGGLE ── */
+function syncThemeIcons(isLight) {
+  // Updates both the desktop topbar icons (matched by id) and the mobile
+  // topbar icons (matched by class, since ids must be unique in the DOM).
+  document.querySelectorAll('#theme-icon-moon, .theme-icon-moon').forEach(el => {
+    el.style.display = isLight ? 'none' : '';
+  });
+  document.querySelectorAll('#theme-icon-sun, .theme-icon-sun').forEach(el => {
+    el.style.display = isLight ? '' : 'none';
+  });
+  const label = document.getElementById('theme-label');
+  if (label) label.textContent = isLight ? 'Dark' : 'Light';
+}
 function toggleTheme() {
   const isLight = document.documentElement.classList.toggle('light');
-  document.getElementById('theme-icon-moon').style.display = isLight ? 'none' : '';
-  document.getElementById('theme-icon-sun').style.display  = isLight ? '' : 'none';
-  document.getElementById('theme-label').textContent = isLight ? 'Dark' : 'Light';
+  syncThemeIcons(isLight);
   try { localStorage.setItem('cauliscan_theme', isLight ? 'light' : 'dark'); } catch {}
 }
 (function initTheme() {
@@ -2509,9 +2547,7 @@ function toggleTheme() {
     const saved = localStorage.getItem('cauliscan_theme');
     if (saved === 'light') {
       document.documentElement.classList.add('light');
-      document.getElementById('theme-icon-moon').style.display = 'none';
-      document.getElementById('theme-icon-sun').style.display  = '';
-      document.getElementById('theme-label').textContent = 'Dark';
+      syncThemeIcons(true);
     }
   } catch {}
 })();
@@ -2524,12 +2560,14 @@ function toggleSidebar() {
   const isOpen = sidebar.classList.toggle('open');
   overlay.classList.toggle('show', isOpen);
   btn.classList.toggle('open', isOpen);
+  document.body.classList.toggle('menu-open', isOpen);
 }
 function closeSidebar() {
   document.getElementById('sidebar').classList.remove('open');
   document.getElementById('sidebar-overlay').classList.remove('show');
   const btn = document.getElementById('hamburger-btn');
   if (btn) btn.classList.remove('open');
+  document.body.classList.remove('menu-open');
 }
 
 /* ── SYNC BOTTOM NAV ── */
