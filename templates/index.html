@@ -1340,7 +1340,7 @@ html.light .bottom-nav-btn { color: rgba(15,23,42,0.4); }
               <div class="bracket rounded-xl overflow-hidden relative" id="camera-box"
                 style="background:var(--surface2);border:1px solid rgba(59,130,246,.15);min-height:200px">
                 <span></span>
-                <video id="camera-feed" style="width:100%;border-radius:10px;display:none" autoplay playsinline></video>
+                <video id="camera-feed" style="width:100%;border-radius:10px;display:none;transform:scaleX(-1)" autoplay playsinline></video>
                 <canvas id="cam-canvas" class="hidden"></canvas>
                 <div id="cam-placeholder" style="padding:48px 24px;display:flex;flex-direction:column;align-items:center;gap:10px">
                   <div style="width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;background:var(--blue-dim);border:1px solid rgba(59,130,246,.15)">
@@ -1892,8 +1892,35 @@ html.light .bottom-nav-btn { color: rgba(15,23,42,0.4); }
   </div><!-- /main-content -->
 </div><!-- /main-wrap -->
 
+<div id="toast-container"></div>
+
 <style>
 @keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+
+/* ── TOAST NOTIFICATION ── */
+#toast-container {
+  position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+  z-index: 99999; display: flex; flex-direction: column; gap: 8px;
+  align-items: center; pointer-events: none;
+}
+.toast {
+  pointer-events: auto;
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 16px; border-radius: 10px;
+  background: var(--surface); border: 1px solid var(--red);
+  box-shadow: 0 8px 24px rgba(0,0,0,.35);
+  font-size: 12.5px; font-weight: 500; color: var(--text);
+  max-width: 360px;
+  animation: toastIn .25s ease-out;
+}
+.toast.toast-leave { animation: toastOut .2s ease-in forwards; }
+.toast-icon {
+  flex-shrink: 0; width: 20px; height: 20px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--red-dim); color: var(--red);
+}
+@keyframes toastIn { from{opacity:0; transform:translateY(-10px)} to{opacity:1; transform:translateY(0)} }
+@keyframes toastOut { from{opacity:1; transform:translateY(0)} to{opacity:0; transform:translateY(-10px)} }
 </style>
 
 <script>
@@ -1968,13 +1995,55 @@ function switchTab(t) {
    FILE / DRAG
 ═══════════════════════════════════════════ */
 let currentBlob = null, currentDataUrl = null;
-function handleFile(e) { const f = e.target.files[0]; if (f) loadImage(f); }
+
+function showToast(msg, type = 'error') {
+  const container = document.getElementById('toast-container');
+  if (!container) { alert(msg); return; }
+  const toast = document.createElement('div');
+  toast.className = 'toast';
+  toast.innerHTML = `
+    <span class="toast-icon">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+      </svg>
+    </span>
+    <span>${msg}</span>`;
+  container.appendChild(toast);
+  setTimeout(() => {
+    toast.classList.add('toast-leave');
+    setTimeout(() => toast.remove(), 220);
+  }, 3200);
+}
+
+function isImageFile(file) {
+  if (!file) return false;
+  if (file.type && file.type.startsWith('image/')) return true;
+  // fallback jika browser tidak mengisi MIME type (mis. beberapa kasus drag & drop)
+  return /\.(jpe?g|png|gif|webp|bmp|svg)$/i.test(file.name || '');
+}
+
+function handleFile(e) {
+  const f = e.target.files[0];
+  if (!f) return;
+  if (!isImageFile(f)) {
+    showToast('File tidak didukung. Silakan unggah file gambar (JPG, PNG, WEBP).');
+    e.target.value = '';
+    return;
+  }
+  loadImage(f);
+}
 function handleDragOver(e) { e.preventDefault(); document.getElementById('drop-zone').classList.add('over'); }
 function handleDragLeave()  { document.getElementById('drop-zone').classList.remove('over'); }
 function handleDrop(e) {
   e.preventDefault();
   document.getElementById('drop-zone').classList.remove('over');
-  const f = e.dataTransfer.files[0]; if (f) loadImage(f);
+  const f = e.dataTransfer.files[0];
+  if (!f) return;
+  if (!isImageFile(f)) {
+    showToast('File tidak didukung. Silakan unggah file gambar (JPG, PNG, WEBP).');
+    return;
+  }
+  loadImage(f);
 }
 function loadImage(file) {
   currentBlob = file;
