@@ -337,6 +337,10 @@ body::before {
     grid-template-columns: 1fr;
 }
 
+#scan-content-grid {
+  grid-template-columns: 1fr 1fr;
+}
+
 /* ── PANEL / CARD ── */
 .panel {
   background: var(--surface);
@@ -1198,12 +1202,11 @@ html.light .bottom-nav-btn { color: rgba(15,23,42,0.4); }
     </div><!-- /content-grid -->
   </div><!-- /page-home -->
 
-
   <!-- ═══════════════════════════════
        PAGE: SCAN
   ═══════════════════════════════ -->
   <div id="page-scan" class="page">
-    <div class="content-grid">
+    <div class="content-grid" id="scan-content-grid">
 
       <!-- LEFT: Input Panel -->
       <div style="display:flex;flex-direction:column;gap:14px">
@@ -1355,7 +1358,8 @@ html.light .bottom-nav-btn { color: rgba(15,23,42,0.4); }
             </div>
           </div>
         </div>
-      </div><!-- /left -->
+      </div><!-- /col-input -->
+
 
       <!-- RIGHT: Result Panel -->
       <div>
@@ -1495,7 +1499,6 @@ html.light .bottom-nav-btn { color: rgba(15,23,42,0.4); }
       </div><!-- /right -->
     </div><!-- /content-grid -->
   </div><!-- /page-scan -->
-
 
   <!-- ═══════════════════════════════
        PAGE: HASIL (History)
@@ -1674,7 +1677,6 @@ html.light .bottom-nav-btn { color: rgba(15,23,42,0.4); }
       </div>
     </div>
   </div><!-- /page-hasil -->
-
 
   <!-- ═══════════════════════════════
        PAGE: PROFILE
@@ -1916,7 +1918,6 @@ setInterval(updateClock, 1000); updateClock();
 /* ═══════════════════════════════════════════
    MODEL STATUS
 ═══════════════════════════════════════════ */
-
 
 /* ═══════════════════════════════════════════
    TABS
